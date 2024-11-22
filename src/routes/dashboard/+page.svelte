@@ -174,7 +174,7 @@
 	<div class="relative min-h-screen p-8">
 		<!-- Header -->
 		<div class="mb-8 flex items-center justify-between">
-			<h1 class="text-3xl font-bold text-white">Kronos Inventory Center</h1>
+			<h1 class="text-3xl font-bold text-white">Kronox Dashboard</h1>
 			<Button
 				variant="ghost"
 				size="icon"

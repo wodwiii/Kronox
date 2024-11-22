@@ -37,12 +37,12 @@
 		<main class="px-6 py-16">
 			<div class="mx-auto max-w-5xl">
 				<div class="flex flex-col items-center text-center">
-					<h1 class="mb-6 text-7xl font-bold leading-tight text-white">
+					<h1 class="mb-6 text-5xl md:text-7xl font-bold leading-tight text-white">
 						Deploy Smart Agents for
 						<span class="text-green-500"> Smarter Operations</span>
 					</h1>
 					<p class="mb-8 max-w-2xl text-lg text-gray-300">
-						Empower your business with AI agents that handle procurement, customer service, and warehouse operations autonomously. Our intelligent assistants work 24/7 to optimize your supply chain and delight your customers.
+						Empower your business with AI agents that handle procurement, customer service, and warehouse operations autonomously. Our smart agents work 24/7 to optimize your supply chain and delight your customers.
 					</p>
 
 					<button

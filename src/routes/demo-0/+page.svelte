@@ -177,7 +177,7 @@
 			sample_rate: 44000,
 			filler_words: true,
 			interim_results: true,
-			utterance_end_ms: 1500,
+			utterance_end_ms: 1000,
 			vad_events: true,
 			endpointing: 100
 		});
@@ -329,7 +329,7 @@
 					<div class="mb-4">
 						<label class="mb-2 block text-sm font-medium text-white">Products to Restock</label>
 						{#each productInputs as product, i}
-							<div class="mb-2 flex gap-2">
+							<div class="mb-2 flex-col md:flex-row gap-2">
 								<input
 									type="text"
 									bind:value={product.name}
@@ -396,7 +396,7 @@
 							</div>
 						</div>
 						<div
-							class="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-sm text-white/70 backdrop-blur-xl"
+							class="invisible md:visible flex flex-row items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-sm text-white/70 backdrop-blur-xl"
 						>
 							<Sparkles class="h-4 w-4" />
 							Demo Mode

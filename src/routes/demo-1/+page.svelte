@@ -181,7 +181,7 @@
 			sample_rate: 44000,
 			filler_words: true,
 			interim_results: true,
-			utterance_end_ms: 1500,
+			utterance_end_ms: 1000,
 			vad_events: true,
 			endpointing: 100
 		});
@@ -437,7 +437,7 @@
 							</div>
 						</div>
 						<div
-							class="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-sm text-white/70 backdrop-blur-xl"
+							class="hidden md:block flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-sm text-white/70 backdrop-blur-xl"
 						>
 							<Sparkles class="h-4 w-4" />
 							Demo Mode
