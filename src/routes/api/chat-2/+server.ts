@@ -1,5 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { ChatOpenAI } from '@langchain/openai';
+import { AzureChatOpenAI } from '@langchain/openai';
 import { InMemoryChatMessageHistory } from '@langchain/core/chat_history';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { RunnableWithMessageHistory } from '@langchain/core/runnables';
@@ -13,12 +13,15 @@ const speechConfig = sdk.SpeechConfig.fromSubscription(
 speechConfig.speechSynthesisVoiceName = 'en-US-CoraMultilingualNeural';
 speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio16Khz64KBitRateMonoMp3;
 
-const model = new ChatOpenAI({
+const model = new AzureChatOpenAI({
     temperature: 0.25,
     model: 'gpt-4o-mini',
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+    // apiKey: import.meta.env.VITE_OPENAI_API_KEY,
     maxRetries: 2,
-    streaming: false,
+    azureOpenAIApiKey: import.meta.env.VITE_AZURE_OPENAI_API_KEY, // In Node.js defaults to process.env.AZURE_OPENAI_API_KEY
+    azureOpenAIApiInstanceName: import.meta.env.VITE_AZURE_OPENAI_API_INSTANCE_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_INSTANCE_NAME
+    azureOpenAIApiDeploymentName: import.meta.env.VITE_AZURE_OPENAI_API_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
+    azureOpenAIApiVersion: import.meta.env.VITE_AZURE_OPENAI_API_VERSION, 
 });
 
 const messageHistories: Record<string, InMemoryChatMessageHistory> = {};
@@ -26,7 +29,8 @@ const messageHistories: Record<string, InMemoryChatMessageHistory> = {};
 const customerServicePrompt = ChatPromptTemplate.fromMessages([
     [
         'system',
-        `You are Sarah, a friendly and professional customer service representative for {companyName}. 
+        `You are Sarah, a friendly and professional customer service representative for {companyName}.
+        CRITICAL INSTRUCTION: KEEP ALL RESPONSES EXTREMELY SHORT AND CONCISE. LIMIT EACH RESPONSE TO 1-2 SENTENCES MAXIMUM. 
 
         Key Information:
         - Business Hours: {customerServiceHours}
