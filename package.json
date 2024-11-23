@@ -46,6 +46,7 @@
 		"@langchain/core": "^0.3.18",
 		"@langchain/openai": "^0.3.14",
 		"@tailwindcss/typography": "^0.5.15",
+		"firebase": "^11.0.2",
 		"lucide-svelte": "^0.460.1",
 		"microsoft-cognitiveservices-speech-sdk": "^1.41.0",
 		"tailwindcss-animate": "^1.0.7",

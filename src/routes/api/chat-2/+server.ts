@@ -4,6 +4,35 @@ import { InMemoryChatMessageHistory } from '@langchain/core/chat_history';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { RunnableWithMessageHistory } from '@langchain/core/runnables';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
+import { z } from 'zod';
+import { initializeApp } from 'firebase/app';
+import { getDatabase, ref, push, set } from 'firebase/database';
+
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyD4xpOp0vfeDU08N4sYEz6TfmWQIVv8WNc",
+    authDomain: "neohyre.firebaseapp.com", 
+    databaseURL: "https://neohyre-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "neohyre",
+    storageBucket: "neohyre.appspot.com",
+    messagingSenderId: "450641500811",
+    appId: "1:450641500811:web:63154eda36f9aa5a39528e",
+    measurementId: "G-KRV0RH14MG"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+// Order schema
+const orderSchema = z.object({
+    productName: z.string().describe("Name of the product ordered"),
+    quantity: z.number().positive().describe("Quantity ordered"),
+    address: z.string().describe("Delivery address"),
+    paymentMode: z.enum(['card', 'cash_on_delivery']).describe("Payment method"),
+    timestamp: z.string(),
+    sessionId: z.string()
+});
 
 // Initialize Azure Speech config
 const speechConfig = sdk.SpeechConfig.fromSubscription(
@@ -16,12 +45,11 @@ speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio
 const model = new AzureChatOpenAI({
     temperature: 0.25,
     model: 'gpt-4o-mini',
-    // apiKey: import.meta.env.VITE_OPENAI_API_KEY,
     maxRetries: 2,
-    azureOpenAIApiKey: import.meta.env.VITE_AZURE_OPENAI_API_KEY, // In Node.js defaults to process.env.AZURE_OPENAI_API_KEY
-    azureOpenAIApiInstanceName: import.meta.env.VITE_AZURE_OPENAI_API_INSTANCE_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_INSTANCE_NAME
-    azureOpenAIApiDeploymentName: import.meta.env.VITE_AZURE_OPENAI_API_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
-    azureOpenAIApiVersion: import.meta.env.VITE_AZURE_OPENAI_API_VERSION, 
+    azureOpenAIApiKey: import.meta.env.VITE_AZURE_OPENAI_API_KEY,
+    azureOpenAIApiInstanceName: import.meta.env.VITE_AZURE_OPENAI_API_INSTANCE_NAME,
+    azureOpenAIApiDeploymentName: import.meta.env.VITE_AZURE_OPENAI_API_DEPLOYMENT_NAME,
+    azureOpenAIApiVersion: import.meta.env.VITE_AZURE_OPENAI_API_VERSION,
 });
 
 const messageHistories: Record<string, InMemoryChatMessageHistory> = {};
@@ -46,6 +74,14 @@ const customerServicePrompt = ChatPromptTemplate.fromMessages([
         - If you don't know something, be honest about it
         - Handle customer concerns professionally
         - End conversations politely
+
+        When collecting order details, wrap them in <OrderDetails> tags using this format:
+        <OrderDetails>
+        PRODUCT::product name
+        QUANTITY::number
+        ADDRESS::delivery address
+        PAYMENT::card or cash_on_delivery
+        </OrderDetails>
 
         Remember to:
         - Make every response short and concise. Do not talk too much.
@@ -72,6 +108,62 @@ const withMessageHistory = new RunnableWithMessageHistory({
     inputMessagesKey: 'input',
     historyMessagesKey: 'chat_history'
 });
+
+// Function to extract and validate order details
+const extractOrderDetails = (text: string) => {
+    const detailsMatch = text.match(/<OrderDetails>([\s\S]*?)<\/OrderDetails>/);
+    if (detailsMatch) {
+        try {
+            const detailsText = detailsMatch[1].trim();
+            const details: Record<string, any> = {};
+            
+            const lines = detailsText.split('\n');
+            lines.forEach(line => {
+                const [key, value] = line.trim().split('::');
+                if (key && value) {
+                    switch(key) {
+                        case 'PRODUCT':
+                            details.productName = value;
+                            break;
+                        case 'QUANTITY':
+                            details.quantity = parseInt(value);
+                            break;
+                        case 'ADDRESS':
+                            details.address = value;
+                            break;
+                        case 'PAYMENT':
+                            details.paymentMode = value;
+                            break;
+                    }
+                }
+            });
+
+            return orderSchema.parse({
+                ...details,
+                timestamp: new Date().toISOString(),
+                sessionId: ''  // Will be filled in later
+            });
+        } catch (error) {
+            console.error('Error parsing order details:', error);
+            return null;
+        }
+    }
+    return null;
+};
+
+// Function to save order to Firebase
+const saveOrderToFirebase = async (orderDetails: z.infer<typeof orderSchema>) => {
+    try {
+        const ordersRef = ref(database, 'customer_orders');
+        const newOrderRef = push(ordersRef);
+        await set(newOrderRef, orderDetails);
+        console.log('Order saved with reference ID:', newOrderRef.key);
+        return newOrderRef.key;
+    } catch (error) {
+        console.error('Error saving to Firebase:', error);
+        throw error;
+    }
+};
 
 // Helper function to synthesize speech
 const synthesizeSpeech = async (text: string): Promise<Uint8Array> => {
@@ -135,7 +227,18 @@ export const POST: RequestHandler = async ({ request }) => {
         );
         console.timeEnd('invoke');
 
-        const responseText = response.content as string;
+        let responseText = response.content as string;
+
+        // Check for order details and save to Firebase if present
+        const detailsMatch = responseText.match(/<OrderDetails>[\s\S]*?<\/OrderDetails>/);
+        if (detailsMatch) {
+            const orderDetails = extractOrderDetails(responseText);
+            if (orderDetails) {
+                orderDetails.sessionId = sessionId;
+                await saveOrderToFirebase(orderDetails);
+                responseText = responseText.replace(detailsMatch[0], "I've recorded your order.");
+            }
+        }
 
         console.time('audio');
         const audioData = await synthesizeSpeech(responseText);
